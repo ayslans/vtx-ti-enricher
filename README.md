@@ -110,3 +110,23 @@ docker run --rm \
     --stix-out /data/out/bundle.stix.json \
     --md-out /data/out/soc-report.md
 ```
+
+## Quick Start (Docker / GHCR)
+
+Run the hardened non-root container (`UID/GID 10001`) directly from GitHub Container Registry without installing Python locally:
+
+```bash
+docker pull ghcr.io/ayslans/vtx-ti-enricher:latest
+
+mkdir -p ./out && chmod 777 ./out
+docker run --rm \
+  -v "$(pwd)/samples:/data/samples:ro" \
+  -v "$(pwd)/out:/data/out" \
+  ghcr.io/ayslans/vtx-ti-enricher:latest \
+  enrich /data/samples/detection_lab_alerts.json \
+    --providers otx,urlhaus \
+    --cache-db /data/out/cache.sqlite3 \
+    --output /data/out/enrich-report.json \
+    --stix-out /data/out/bundle.stix.json \
+    --md-out /data/out/soc-report.md
+```
