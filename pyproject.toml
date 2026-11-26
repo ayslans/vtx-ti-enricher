@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=78.1.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vtx-ti-enricher"
+version = "0.1.0"
+description = "Asynchronous Threat Intelligence & IOC enrichment engine for Blue Team / SOC pipelines."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7,<3.0",
+    "typer>=0.12,<1.0",
+    "httpx>=0.27,<1.0",
+    "aiosqlite>=0.20,<1.0",
+    "tenacity>=8.3,<10.0",
+    "PyYAML>=6.0,<7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.3,<10.0",
+    "pytest-asyncio>=1.3,<2.0",
+    "respx>=0.21,<1.0",
+    "bandit>=1.7,<2.0",
+    "pip-audit>=2.7,<3.0",
+]
+
+[project.scripts]
+vtx-ti-enricher = "vtx_ti_enricher.main:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"

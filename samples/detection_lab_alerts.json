@@ -1,0 +1,28 @@
+{
+  "pipeline": "vtx-detection-lab",
+  "schema_version": "1.0",
+  "alerts": [
+    {
+      "alert_id": "ALRT-2026-0001",
+      "rule_id": "VTX-AUTH-001",
+      "mitre_technique": "T1110.003",
+      "severity": "high",
+      "event": {
+        "src_ip": "203.0.113.45",
+        "dest_ip": "10.10.20.5",
+        "hostname": "auth-gw.internal"
+      }
+    },
+    {
+      "alert_id": "ALRT-2026-0002",
+      "rule_id": "VTX-EXEC-004",
+      "mitre_technique": "T1059.001",
+      "severity": "critical",
+      "event": {
+        "src_ip": "198.51.100.77",
+        "url": "hxxps://dropper[.]bad-actor[.]org/update.ps1",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ]
+}
