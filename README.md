@@ -1,5 +1,10 @@
 # vtx-ti-enricher
 
+[![CI & AppSec Pipeline](https://github.com/ayslans/vtx-ti-enricher/actions/workflows/ci.yml/badge.svg)](https://github.com/ayslans/vtx-ti-enricher/actions/workflows/ci.yml)
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3133FF?style=flat)
+![STIX 2.1](https://img.shields.io/badge/STIX-2.1-B743FF?style=flat)
+![Docker Non-Root](https://img.shields.io/badge/docker-non--root-2496ED?style=flat)
+
 Asynchronous Threat Intelligence (TI) and IoC enrichment CLI built with Python, httpx, aiosqlite, pydantic v2, and typer. Designed for Blue Team and SOC pipelines with OPSEC guardrails, bounded concurrency, resilience primitives, deterministic verdict scoring, and STIX 2.1 export.
 
 ## Architecture Overview
