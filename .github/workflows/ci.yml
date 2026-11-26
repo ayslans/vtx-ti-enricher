@@ -71,7 +71,7 @@ jobs:
           docker run --rm vtx-ti-enricher:ci version
 
       - name: Scan container image with Trivy (SARIF)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: "vtx-ti-enricher:ci"
           format: "sarif"
