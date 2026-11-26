@@ -7,13 +7,16 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+from pydantic import ValidationError
 
 from vtx_ti_enricher import __version__
 from vtx_ti_enricher.cache import AsyncSQLiteCache
 from vtx_ti_enricher.engine import EnrichmentEngine
-from vtx_ti_enricher.models import EnrichBatchReport
+from vtx_ti_enricher.markdown_report import write_markdown_report
+from vtx_ti_enricher.models import EnrichBatchReport, Verdict
 from vtx_ti_enricher.parser import parse_file
 from vtx_ti_enricher.providers import build_providers
+from vtx_ti_enricher.stix_exporter import write_stix_bundle
 
 app = typer.Typer(
     help="vtx-ti-enricher — Asynchronous Threat Intelligence & IOC Enrichment CLI.",
@@ -156,13 +159,29 @@ def enrich(
     defang_output: bool = typer.Option(
         True,
         "--defang/--no-defang",
-        help="Display defanged indicators in terminal output.",
+        help="Display defanged indicators in terminal and Markdown output.",
     ),
     output: Optional[Path] = typer.Option(
         None,
         "--output",
         "-o",
         help="Optional path to export the EnrichBatchReport JSON.",
+    ),
+    stix_out: Optional[Path] = typer.Option(
+        None,
+        "--stix-out",
+        help="Optional path to export a deterministic STIX 2.1 Bundle JSON.",
+    ),
+    stix_min_verdict: Optional[Verdict] = typer.Option(
+        None,
+        "--stix-min-verdict",
+        case_sensitive=False,
+        help="Minimum verdict to include in STIX 2.1 export (unknown|benign|suspicious|malicious).",
+    ),
+    md_out: Optional[Path] = typer.Option(
+        None,
+        "--md-out",
+        help="Optional path to export an executive SOC Markdown report.",
     ),
 ) -> None:
     """Concurrently enrich parsed IOCs with WAL cache, circuit breakers, and verdict scoring."""
@@ -259,6 +278,70 @@ def enrich(
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(report.model_dump_json(indent=2), encoding="utf-8")
         typer.echo(f"\nEnrichment report exported to: {output}")
+
+    if stix_out:
+        bundle = write_stix_bundle(report, stix_out, min_verdict=stix_min_verdict)
+        typer.echo(
+            f"STIX 2.1 bundle exported to: {stix_out} ({len(bundle['objects'])} objects)"
+        )
+
+    if md_out:
+        write_markdown_report(report, md_out, defang_output=defang_output)
+        typer.echo(f"Markdown SOC report exported to: {md_out}")
+
+
+@app.command()
+def export(
+    report_path: Path = typer.Argument(
+        ...,
+        exists=True,
+        readable=True,
+        help="Path to an existing EnrichBatchReport JSON file.",
+    ),
+    stix_out: Optional[Path] = typer.Option(
+        None,
+        "--stix-out",
+        help="Output path for the deterministic STIX 2.1 Bundle JSON.",
+    ),
+    stix_min_verdict: Optional[Verdict] = typer.Option(
+        None,
+        "--stix-min-verdict",
+        case_sensitive=False,
+        help="Minimum verdict to include in STIX 2.1 export (unknown|benign|suspicious|malicious).",
+    ),
+    md_out: Optional[Path] = typer.Option(
+        None,
+        "--md-out",
+        help="Output path for the executive SOC Markdown report.",
+    ),
+    defang_output: bool = typer.Option(
+        True,
+        "--defang/--no-defang",
+        help="Defang indicators in the generated Markdown report.",
+    ),
+) -> None:
+    """Convert an existing EnrichBatchReport JSON into STIX 2.1 and/or Markdown SOC reports."""
+    if stix_out is None and md_out is None:
+        typer.echo("Error: specify at least one of --stix-out or --md-out.", err=True)
+        raise typer.Exit(code=2)
+
+    try:
+        report = EnrichBatchReport.model_validate_json(
+            report_path.read_text(encoding="utf-8")
+        )
+    except ValidationError as exc:
+        typer.echo(f"Error: invalid EnrichBatchReport JSON: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
+    if stix_out:
+        bundle = write_stix_bundle(report, stix_out, min_verdict=stix_min_verdict)
+        typer.echo(
+            f"STIX 2.1 bundle exported to: {stix_out} ({len(bundle['objects'])} objects)"
+        )
+
+    if md_out:
+        write_markdown_report(report, md_out, defang_output=defang_output)
+        typer.echo(f"Markdown SOC report exported to: {md_out}")
 
 
 @app.command("cache-stats")
