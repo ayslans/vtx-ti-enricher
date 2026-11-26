@@ -25,7 +25,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH="/opt/vtx/lib/python3.12/site-packages:/opt/vtx/local/lib/python3.12/site-packages" \
     VTX_CACHE_DB="/var/lib/vtx-ti-enricher/cache.sqlite3"
 
-RUN groupadd --gid 10001 vtxapp \
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall -y --root-user-action=ignore pip \
+    && groupadd --gid 10001 vtxapp \
     && useradd --uid 10001 --gid 10001 --home-dir /app --shell /usr/sbin/nologin vtxapp \
     && mkdir -p /app /var/lib/vtx-ti-enricher \
     && chown -R vtxapp:vtxapp /app /var/lib/vtx-ti-enricher
