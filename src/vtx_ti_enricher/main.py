@@ -12,6 +12,10 @@ from pydantic import ValidationError
 from vtx_ti_enricher import __version__
 from vtx_ti_enricher.cache import AsyncSQLiteCache
 from vtx_ti_enricher.engine import EnrichmentEngine
+from vtx_ti_enricher.evidence_log import (
+    append_report_to_evidence_log,
+    verify_evidence_log,
+)
 from vtx_ti_enricher.markdown_report import write_markdown_report
 from vtx_ti_enricher.models import EnrichBatchReport, Verdict
 from vtx_ti_enricher.parser import parse_file
@@ -183,6 +187,16 @@ def enrich(
         "--md-out",
         help="Optional path to export an executive SOC Markdown report.",
     ),
+    evidence_log: Optional[Path] = typer.Option(
+        None,
+        "--evidence-log",
+        help="Optional path to append SHA-256 hash-chained evidence records (JSONL).",
+    ),
+    asset_id: Optional[str] = typer.Option(
+        None,
+        "--asset-id",
+        help="Optional canonical asset_id recorded in the evidence ledger.",
+    ),
 ) -> None:
     """Concurrently enrich parsed IOCs with WAL cache, circuit breakers, and verdict scoring."""
     provider_names = [name.strip() for name in providers.split(",") if name.strip()]
@@ -289,6 +303,21 @@ def enrich(
         write_markdown_report(report, md_out, defang_output=defang_output)
         typer.echo(f"Markdown SOC report exported to: {md_out}")
 
+    if evidence_log:
+        try:
+            records = append_report_to_evidence_log(
+                report,
+                evidence_log,
+                asset_id=asset_id,
+            )
+        except ValueError as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        head = records[-1].entry_hash if records else "none"
+        typer.echo(
+            f"Evidence ledger updated: {evidence_log} (+{len(records)} entries, head={head})"
+        )
+
 
 @app.command()
 def export(
@@ -314,15 +343,28 @@ def export(
         "--md-out",
         help="Output path for the executive SOC Markdown report.",
     ),
+    evidence_log: Optional[Path] = typer.Option(
+        None,
+        "--evidence-log",
+        help="Optional path to append SHA-256 hash-chained evidence records (JSONL).",
+    ),
+    asset_id: Optional[str] = typer.Option(
+        None,
+        "--asset-id",
+        help="Optional canonical asset_id recorded in the evidence ledger.",
+    ),
     defang_output: bool = typer.Option(
         True,
         "--defang/--no-defang",
         help="Defang indicators in the generated Markdown report.",
     ),
 ) -> None:
-    """Convert an existing EnrichBatchReport JSON into STIX 2.1 and/or Markdown SOC reports."""
-    if stix_out is None and md_out is None:
-        typer.echo("Error: specify at least one of --stix-out or --md-out.", err=True)
+    """Convert an existing EnrichBatchReport JSON into STIX 2.1, Markdown SOC, and/or Evidence JSONL."""
+    if stix_out is None and md_out is None and evidence_log is None:
+        typer.echo(
+            "Error: specify at least one of --stix-out, --md-out, or --evidence-log.",
+            err=True,
+        )
         raise typer.Exit(code=2)
 
     try:
@@ -342,6 +384,48 @@ def export(
     if md_out:
         write_markdown_report(report, md_out, defang_output=defang_output)
         typer.echo(f"Markdown SOC report exported to: {md_out}")
+
+    if evidence_log:
+        try:
+            records = append_report_to_evidence_log(
+                report,
+                evidence_log,
+                asset_id=asset_id,
+            )
+        except ValueError as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        head = records[-1].entry_hash if records else "none"
+        typer.echo(
+            f"Evidence ledger updated: {evidence_log} (+{len(records)} entries, head={head})"
+        )
+
+
+@app.command("verify-evidence")
+def verify_evidence(
+    ledger_path: Path = typer.Argument(
+        ...,
+        exists=True,
+        readable=True,
+        help="Path to the SHA-256 hash-chained evidence JSONL ledger.",
+    ),
+) -> None:
+    """Verify sequence continuity and SHA-256 hash chain integrity of an evidence ledger."""
+    result = verify_evidence_log(ledger_path)
+    if result.valid:
+        head = result.head_hash or "empty"
+        typer.echo(
+            f"Evidence ledger VALID: {result.total_entries} entries verified (head={head})"
+        )
+        return
+
+    typer.echo(
+        f"Evidence ledger INVALID ({len(result.errors)} error(s)):",
+        err=True,
+    )
+    for err in result.errors:
+        typer.echo(f"  - {err}", err=True)
+    raise typer.Exit(code=1)
 
 
 @app.command("cache-stats")

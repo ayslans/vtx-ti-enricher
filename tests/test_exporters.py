@@ -277,4 +277,4 @@ def test_cli_export_rejects_when_no_output_flag_given(tmp_path: Path) -> None:
     runner = CliRunner()
     res = runner.invoke(app, ["export", str(report_file)])
     assert res.exit_code == 2
-    assert "at least one of --stix-out or --md-out" in res.output
+    assert "at least one of --stix-out, --md-out, or --evidence-log" in res.output
