@@ -1,0 +1,146 @@
+{
+  "schema_version": "3.0",
+  "input_source": "samples/detection_lab_alerts.json",
+  "providers_enabled": [
+    "abuseipdb",
+    "virustotal"
+  ],
+  "total_enriched": 2,
+  "skipped_internal": 0,
+  "metrics": {
+    "duration_ms": 42.5,
+    "max_concurrency_limit": 8,
+    "peak_inflight": 2,
+    "coalesced_hits": 0,
+    "cache_hits": 0,
+    "cache_misses": 4,
+    "verdict_counts": {
+      "malicious": 1,
+      "suspicious": 1
+    },
+    "providers": {}
+  },
+  "items": [
+    {
+      "ioc": {
+        "ioc_type": "ipv4",
+        "value": "203.0.113.42",
+        "defanged": "203[.]0[.]113[.]42",
+        "is_internal": false,
+        "is_documentation": true,
+        "sources": [
+          "samples/detection_lab_alerts.json"
+        ]
+      },
+      "provider_results": [
+        {
+          "provider": "abuseipdb",
+          "status": "ok",
+          "malicious_score": 92,
+          "detections": 14,
+          "total_engines": 20,
+          "tags": [
+            "web-attack",
+            "sql-injection"
+          ],
+          "raw_summary": {},
+          "error": null,
+          "attempts": 1,
+          "from_cache": false,
+          "latency_ms": 18.2
+        },
+        {
+          "provider": "virustotal",
+          "status": "ok",
+          "malicious_score": 88,
+          "detections": 11,
+          "total_engines": 70,
+          "tags": [
+            "scanner",
+            "exploit"
+          ],
+          "raw_summary": {},
+          "error": null,
+          "attempts": 1,
+          "from_cache": false,
+          "latency_ms": 21.4
+        }
+      ],
+      "assessment": {
+        "verdict": "malicious",
+        "composite_score": 90.0,
+        "confidence": "high",
+        "responding_providers": 2,
+        "malicious_providers": 2,
+        "corroborated": true,
+        "tags": [
+          "web-attack",
+          "exploit"
+        ],
+        "reasons": [
+          "Corroborated malicious activity across AbuseIPDB and VirusTotal."
+        ],
+        "recommended_action": "Block indicator at perimeter WAF/firewall and open SOC incident.",
+        "evidence": []
+      }
+    },
+    {
+      "ioc": {
+        "ioc_type": "ipv4",
+        "value": "198.51.100.7",
+        "defanged": "198[.]51[.]100[.]7",
+        "is_internal": false,
+        "is_documentation": true,
+        "sources": [
+          "samples/detection_lab_alerts.json"
+        ]
+      },
+      "provider_results": [
+        {
+          "provider": "abuseipdb",
+          "status": "ok",
+          "malicious_score": 45,
+          "detections": 3,
+          "total_engines": 20,
+          "tags": [
+            "brute-force"
+          ],
+          "raw_summary": {},
+          "error": null,
+          "attempts": 1,
+          "from_cache": false,
+          "latency_ms": 14.0
+        },
+        {
+          "provider": "virustotal",
+          "status": "not_found",
+          "malicious_score": 0,
+          "detections": 0,
+          "total_engines": 70,
+          "tags": [],
+          "raw_summary": {},
+          "error": null,
+          "attempts": 1,
+          "from_cache": false,
+          "latency_ms": 16.5
+        }
+      ],
+      "assessment": {
+        "verdict": "suspicious",
+        "composite_score": 45.0,
+        "confidence": "medium",
+        "responding_providers": 2,
+        "malicious_providers": 0,
+        "corroborated": false,
+        "tags": [
+          "brute-force"
+        ],
+        "reasons": [
+          "Elevated abuse score reported by AbuseIPDB."
+        ],
+        "recommended_action": "Monitor source IP and correlate with authentication telemetry.",
+        "evidence": []
+      }
+    }
+  ]
+}

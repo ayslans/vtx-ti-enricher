@@ -44,6 +44,31 @@ jobs:
       - name: Audit dependency tree for known CVEs (pip-audit)
         run: pip-audit --skip-editable
 
+      - name: Generate and verify SHA-256 evidence ledger (positive + tamper gate)
+        run: |
+          mkdir -p artifacts/evidence
+          vtx-ti-enricher export samples/sample_enrich_report.json \
+            --evidence-log artifacts/evidence/evidence_ledger.jsonl \
+            --asset-id pay-lnx-gw-01
+          vtx-ti-enricher export samples/sample_enrich_report.json \
+            --evidence-log artifacts/evidence/evidence_ledger.jsonl \
+            --asset-id cde-app-win-01
+          vtx-ti-enricher verify-evidence artifacts/evidence/evidence_ledger.jsonl
+          python -c 'import json, pathlib; p = pathlib.Path("artifacts/evidence/evidence_ledger.jsonl"); ls = p.read_text(encoding="utf-8").splitlines(); o = json.loads(ls[0]); o["verdict"] = "benign"; pathlib.Path("/tmp/tampered_ledger.jsonl").write_text("\n".join([json.dumps(o), *ls[1:]]) + "\n", encoding="utf-8")'
+          if vtx-ti-enricher verify-evidence /tmp/tampered_ledger.jsonl; then
+            echo "ERROR: verify-evidence accepted a tampered ledger!" >&2
+            exit 1
+          fi
+          rm -f /tmp/tampered_ledger.jsonl
+
+      - name: Upload SHA-256 evidence ledger artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ti-evidence-ledger
+          path: artifacts/evidence/evidence_ledger.jsonl
+          if-no-files-found: error
+          retention-days: 14
+
   container-and-trivy:
     name: Docker Build & Trivy Vulnerability Scan
     runs-on: ubuntu-latest
@@ -86,7 +111,7 @@ jobs:
 
       - name: Upload Trivy SARIF artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: trivy-sarif-report
           path: trivy-results.sarif
